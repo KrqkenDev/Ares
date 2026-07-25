@@ -97,7 +97,7 @@ class Portfolio:
         else:
             raise ValueError("Not enough cash for transaction.")
 
-    def sell_stock(self, ticker: str, shares: int, price: float):
+    def sell_stock(self, ticker: str, shares: int, price: float, net_proceeds: float | None = None):
         """
         Sells a specified number of shares of a stock at a given price.
         Updates the holdings and trade history accordingly.
@@ -118,8 +118,13 @@ class Portfolio:
 
         trade_value = shares * price
 
+        if net_proceeds is None:
+            net_proceeds = trade_value
+
+        trade_value = shares * price
+
         #Calculate profit from the sale
-        profit = (price - average_cost) * shares
+        profit = net_proceeds - (average_cost * shares)
 
 
         # Update holdings
@@ -141,7 +146,7 @@ class Portfolio:
 
         self.trade_history.append(trade_record)
         
-    def buy_stock(self, ticker: str, shares: int, price: float):
+    def buy_stock(self, ticker: str, shares: int, price: float, total_cost: float | None = None):
         """
         Buys a specified number of shares of a stock at a given price.
         Updates the holdings and trade history accordingly.
@@ -156,6 +161,11 @@ class Portfolio:
             raise ValueError("Price must be positive.")
 
         trade_value = shares * price
+
+        if total_cost is None:
+            total_cost = trade_value
+
+        effective_price = total_cost / shares
 
         # Update holdings
         if ticker in self.holdings:

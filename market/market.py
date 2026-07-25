@@ -34,7 +34,7 @@ class Market:
 
             dataframe = self.indicator_engine.calculate_all(dataframe)
 
-            dataframe = dataframe.bfill()
+            dataframe = dataframe.fillna(0)
 
             self.historical_data[ticker] = dataframe
 
@@ -108,6 +108,15 @@ class Market:
 
         return float(dataframe.iloc[self.current_step]["Close"])
 
+    def get_open(self, ticker: str) -> float:
+        """
+        Returns the current bar's opening price of a ticker.
+        """
+        dataframe = self._get_dataframe(ticker)
+
+        self._validate_step(dataframe)
+
+        return float(dataframe.iloc[self.current_step]["Open"])
 
     def get_date(self, ticker: str | None = None) -> pd.Timestamp:
         """

@@ -135,7 +135,7 @@ class TradingEnvironment(gym.Env):
         if agent_action == AgentAction.HOLD:
             return
 
-        price = self.market.get_price(asset.ticker)
+        price = self.market.get_open(asset.ticker)
 
         if agent_action == AgentAction.BUY:
             cash = self.portfolio.get_cash()
@@ -195,9 +195,9 @@ class TradingEnvironment(gym.Env):
         ])
 
     def step(self, action: dict) -> tuple:
-        self._execute_action(action)
-
         self.market.next_step()
+
+        self._execute_action(action)
 
         terminated = self._is_done()
 

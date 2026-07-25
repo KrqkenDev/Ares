@@ -118,7 +118,8 @@ class Broker:
             #Buying shares
             self.portfolio.buy_stock(ticker=order.asset.ticker,
                                      shares=order.shares, 
-                                     price=order.price)
+                                     price=order.price,
+                                     total_cost=total_cost)
 
         elif order.action == OrderAction.SELL:
 
@@ -126,6 +127,7 @@ class Broker:
             #Sells shares
             self.portfolio.sell_stock(ticker=order.asset.ticker,
                                       shares=order.shares,
-                                      price=order.price)
+                                      price=order.price,
+                                      net_proceeds=proceeds)
             #Then, updates money.
             self.portfolio.deposit_cash(proceeds)

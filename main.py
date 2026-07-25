@@ -17,7 +17,7 @@ from agent.trainer import Trainer
 #Config
 TICKERS = list(ASSETS.keys())
 
-START_DATE = datetime(2023, 1, 1)
+START_DATE = datetime(2020, 1, 1)
 END_DATE = datetime(2025, 12, 31)
 
 INTERVAL = "1d"  
@@ -74,7 +74,7 @@ def create_environment():
 
     print("Creating broker...")
 
-    broker = Broker(portfolio)
+    broker = Broker(portfolio, commission_rate=0.001)
 
     print("Creating environment...")
 
@@ -97,7 +97,7 @@ def main():
 
     Path("models").mkdir(exist_ok=True)
 
-    agent.save("models/training_model.pth")
+    agent.save("models/training_model2.pth")
 
     env.close()
 
