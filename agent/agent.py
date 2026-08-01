@@ -37,7 +37,7 @@ class Agent:
         #Future Rewards
         self.gamma = 0.99
 
-    def choose_action(self, state):
+    def choose_action(self, state) -> int:
         if random.random() < self.epsilon:
             return random.randrange(self.action_size)
 
@@ -46,7 +46,7 @@ class Agent:
         with torch.no_grad():
             q_values = self.model(state)
 
-        return torch.argmax(q_values).item()
+        return int(torch.argmax(q_values).item())
 
     def decode_action(self, action: int):
 
@@ -75,6 +75,10 @@ class Agent:
 
     def save(self, path: str):
         torch.save(self.model.state_dict(), path)
+
+    def load(self, path):
+        self.model.load_state_dict(torch.load(path, map_location=self.device))
+        self.model.eval()
 
     def learn(self, batch_size: int = 64):
         if len(self.memory) < batch_size:
@@ -122,6 +126,9 @@ class Agent:
         loss = self.loss_function(current_q, target_q)
 
         self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
 
     def update_target(self):
         self.target_model.load_state_dict(self.model.state_dict())

@@ -16,6 +16,20 @@ class TradingEnvironment(gym.Env):
 
     metadata = {"render_modes": ["human"]}
 
+    INDICATOR_COLUMNS = [
+    "RSI_14_norm",
+    "EMA_DIFF_20_50_norm",
+    "MACD_norm",
+    "MACD_signal_norm",
+    "MACD_hist_norm",
+    "BB_percent_b",
+    "ATR_14_pct",
+    "STOCH_K_norm",
+    "STOCH_D_norm",
+    "ROC_10",
+    "OBV_zscore",
+    ]
+
     def __init__(self, market: Market, portfolio: Portfolio, broker: Broker) -> None:
         self.market = market
         self.portfolio = portfolio
@@ -55,7 +69,12 @@ class TradingEnvironment(gym.Env):
 
     "step": gym.spaces.Discrete(
         self.market.max_steps
-    )
+    ),
+    "indicators": gym.spaces.Box(
+        low=-np.inf,
+        high=np.inf,
+        shape=(len(self.tickers)* len(self.INDICATOR_COLUMNS),),
+        dtype=np.float32)
 })
 
     def _get_current_prices(self) -> dict[str, float]:
@@ -65,6 +84,14 @@ class TradingEnvironment(gym.Env):
             prices[ticker] = self.market.get_price(ticker)
 
         return prices
+
+    def _get_current_indicators(self) -> np.ndarray:
+        values = []
+
+        for ticker in self.tickers:
+            values.extend(self.market.get_indicator_values(ticker, self.INDICATOR_COLUMNS))
+
+        return np.array(values, dtype=np.float32)
 
     def _get_observation(self) -> dict:
         prices = self._get_current_prices()
@@ -81,6 +108,7 @@ class TradingEnvironment(gym.Env):
             list(prices.values()),
             dtype=np.float32
         ),
+        "indicators": self._get_current_indicators(),
         "step": self.market.current_step} 
 
     def _calculate_reward(self) -> float:
@@ -124,13 +152,20 @@ class TradingEnvironment(gym.Env):
 
         return asset, agent_action, allocation
 
-    def _execute_action(self, action) -> None:
+    def _execute_action(self, action: int) -> None:
 
         """
         Executes an action chosen by the AI
         """
 
         asset, agent_action, allocation = self._decode_action(action)
+
+        print(
+            f"{self.market.get_date().date()} | "
+            f"{asset.ticker} | "
+            f"{agent_action.name} | "
+            f"{allocation}"
+        )
 
         if agent_action == AgentAction.HOLD:
             return
@@ -166,6 +201,11 @@ class TradingEnvironment(gym.Env):
 
         try:
             self.broker.execute_order(order)
+            print(
+                f"Executed {order.action.name} "
+                f"{order.shares} shares of {asset.ticker} "
+                f"@ {price:.2f}"
+            )
         except ValueError as e:
             logger.warning(f"Order execution failed: {e}")
 
@@ -186,18 +226,20 @@ class TradingEnvironment(gym.Env):
         print(f"Cash: {self.portfolio.get_cash():.2f}")
         print(f"Portfolio: {self.portfolio.get_total_value(prices):.2f}")
 
-    def flatten_observation(self, observetion: dict) -> np.ndarray:
+    def flatten_observation(self, observation: dict) -> np.ndarray:
         return np.concatenate([
-            observetion["cash"],
-            observetion["portfolio_value"],
-            observetion["prices"],
-            observetion["step"],
+            observation["cash"],
+            observation["portfolio_value"],
+            observation["prices"],
+            observation["indicators"],
+            np.array([observation["step"]],
+                     dtype=np.float32),
         ])
 
-    def step(self, action: dict) -> tuple:
-        self.market.next_step()
-
+    def step(self, action: int) -> tuple[dict, float, bool, bool, dict]:
         self._execute_action(action)
+
+        self.market.next_step()
 
         terminated = self._is_done()
 

@@ -19,6 +19,8 @@ class Market:
 
         self.historical_data = {}
 
+        self.current_step = 0
+
         for ticker, dataframe in historical_data.items():
 
             if not isinstance(ticker, str):
@@ -32,20 +34,26 @@ class Market:
             if missing:
                 raise ValueError(f"{ticker} is missing required columns: {missing}")
 
+            dataframe = dataframe.copy()
+
             dataframe = self.indicator_engine.calculate_all(dataframe)
 
             dataframe = dataframe.fillna(0)
 
             self.historical_data[ticker] = dataframe
 
+        first_dataframe = next(iter(self.historical_data.values()))
 
-        self.current_step = 0
+        self.indicator_columns = [column for column in first_dataframe.columns if column not in required_columns]
 
 
     @property
     def tickers(self) -> list[str]:
         return list(self.historical_data.keys())
 
+    @property
+    def indicators(self) -> list[str]:
+        return self.indicator_columns
 
     @property
     def max_steps(self) -> int:
@@ -53,8 +61,8 @@ class Market:
         Returns the number of timesteps available in market data,
         assumes that all tickers have the same length
         """
-
-        first_ticker = self.tickers[0]
+        if not self.historical_data:
+            raise ValueError("No historical data available.")
 
         return min(len(dataframe) for dataframe in self.historical_data.values())
 
@@ -107,6 +115,15 @@ class Market:
         self._validate_step(dataframe)
 
         return float(dataframe.iloc[self.current_step]["Close"])
+
+    def get_indicator_values(self, ticker: str, columns: list[str]) -> list[float]:
+        """
+        Return the current-timestep values for the given indicator columns
+        """
+
+        row = self.get_current_row(ticker)
+
+        return [float(row[column]) for column in columns]
 
     def get_open(self, ticker: str) -> float:
         """
